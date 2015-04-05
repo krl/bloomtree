@@ -1,0 +1,13 @@
+package persist.pb;
+
+message Tree {
+		enum DataType {
+				Root = 0;
+				Node2 = 1;
+				Node3 = 2;
+				Leaf = 3;
+		}
+		required DataType Type = 1;
+		required uint64 Count = 2;
+		optional string Data = 3;
+}
