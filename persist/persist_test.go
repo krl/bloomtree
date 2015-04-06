@@ -1,6 +1,7 @@
 package persist_test
 
 import (
+	"fmt"
 	ds "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore/sync"
 	"github.com/ipfs/go-ipfs/blocks/blockstore"
@@ -54,8 +55,8 @@ func TestPersistSingletonRoot(t *testing.T) {
 		t.Fatal("Count differs between trees")
 	}
 
-	_, get0, _ := tree.GetAt(0)
-	_, get1, _ := persisted.GetAt(0)
+	get0, _ := tree.GetAt(0)
+	get1, _ := persisted.GetAt(0)
 
 	if get0 != get1 {
 		t.Fatal("Item retrieved does not match")
@@ -77,7 +78,7 @@ func PersistAndGetAllValues(t *testing.T) {
 	tree = tree.Persist(dserv)
 
 	for i = 0; i < count; i++ {
-		_, res, _ := tree.GetAt(i)
+		res, _ := tree.GetAt(i)
 
 		if res != s.FormatUint(-i-1+count, 10) {
 			t.Errorf("Got %v from index %v, expected %v", res, i, -i-1+count)
@@ -159,7 +160,7 @@ func TestPersistAndGetAllValues(t *testing.T) {
 
 	// access all the values
 	for i = 0; i < count; i++ {
-		tree, _, _ = tree.GetAt(i)
+		_, _ = tree.GetAt(i)
 	}
 
 	// now local tree should have all elements unreferenced

@@ -92,7 +92,7 @@ func TestGet(t *testing.T) {
 	}
 
 	for i = 0; i < count; i++ {
-		_, res, _ := tree.GetAt(i)
+		res, _ := tree.GetAt(i)
 
 		if res != s.FormatUint(-i-1+count, 10) {
 			t.Fatal("Got %v from index %v, expected %v", res, i, -i-1+count)
@@ -110,7 +110,7 @@ func TestGetAddingFromEnd(t *testing.T) {
 	}
 
 	for i = 0; i < count; i++ {
-		_, res, _ := tree.GetAt(i)
+		res, _ := tree.GetAt(i)
 
 		if res != s.FormatUint(i, 10) {
 			t.Fatal("Got %v from index %v, expected %v", res, i, i)
@@ -130,7 +130,7 @@ func TestRemoveSpecific(t *testing.T) {
 
 	tree = tree.RemoveAt(1)
 
-	tree, got, _ := tree.GetAt(0)
+	got, _ := tree.GetAt(0)
 
 	if got != "0" {
 		t.Fatal("did not get 0 from tree with removed 1:st element")
@@ -204,7 +204,7 @@ func TestRemoveEveryOtherPreservingOrder(t *testing.T) {
 	}
 
 	for i = 0; i < count; i++ {
-		_, res, _ := tree.GetAt(i)
+		res, _ := tree.GetAt(i)
 		if res != s.FormatUint(i*2+1, 10) {
 			t.Fatal("Got %v from index %v, expected %v", res, i, count-i-1)
 		}
