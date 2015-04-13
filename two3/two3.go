@@ -22,7 +22,7 @@ type Tree interface {
 
 // NewLeaf
 
-func NewLeaf(value string) Leaf {
+func NewLeaf(value []byte) Leaf {
 	leaf := Leaf{Value: value}
 	return leaf
 }
@@ -448,7 +448,7 @@ func (t Node3) CountUnreferencedNodes() int {
 // Leaf
 
 type Leaf struct {
-	Value string
+	Value []byte
 }
 
 func (t Leaf) GetLeavesDepth(depth int) []int {
@@ -500,7 +500,7 @@ func RefFromTree(t Tree, dserv mdag.DAGService) TreeRef {
 		node.AddRawLink("2", s.children[2].Persist(dserv).link)
 	case Leaf:
 		datatype = pb.Tree_Leaf
-		message.Data = &s.Value
+		message.Data = s.Value
 	}
 
 	message.Type = &datatype
@@ -556,7 +556,7 @@ func (r TreeRef) Read() Tree {
 
 	switch *unmarshalled.Type {
 	case pb.Tree_Leaf:
-		return NewLeaf(*unmarshalled.Data)
+		return NewLeaf(unmarshalled.Data)
 
 	case pb.Tree_Node2:
 		child0, err := node.GetNodeLink("0")

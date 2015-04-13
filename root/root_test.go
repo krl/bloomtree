@@ -2,10 +2,21 @@ package root
 
 import (
 	// "fmt"
+	"encoding/binary"
 	"math/rand"
-	s "strconv"
 	"testing"
 )
+
+func BytesFromInt(i uint64) []byte {
+	b := make([]byte, 8)
+	binary.PutUvarint(b, i)
+	return b
+}
+
+func IntFromBytes(b []byte) uint64 {
+	res, _ := binary.Uvarint(b)
+	return res
+}
 
 func TestAdd(t *testing.T) {
 	var count uint64 = 100
@@ -15,16 +26,16 @@ func TestAdd(t *testing.T) {
 	for i = 0; i < count; i++ {
 
 		if tree.Count() != i {
-			t.Fatal("Should have count() equal to %v", count)
+			t.Fatalf("Should have count() equal to %v", count)
 		}
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 		if !tree.InvariantAllLeavesAtSameDepth() {
 			t.Fatal("invariant all leaves at same depth broken")
 		}
 	}
 
 	if tree.Count() != count {
-		t.Fatal("Should have count() equal to %v", count)
+		t.Fatalf("Should have count() equal to %v", count)
 	}
 }
 
@@ -36,16 +47,16 @@ func TestAddReverse(t *testing.T) {
 	for i = 0; i < count; i++ {
 
 		if tree.Count() != i {
-			t.Fatal("Should have count() equal to %v", count)
+			t.Fatalf("Should have count() equal to %v", count)
 		}
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 		if !tree.InvariantAllLeavesAtSameDepth() {
 			t.Fatal("invariant all leaves at same depth broken")
 		}
 	}
 
 	if tree.Count() != count {
-		t.Fatal("Should have count() equal to %v", count)
+		t.Fatalf("Should have count() equal to %v", count)
 	}
 }
 
@@ -60,7 +71,7 @@ func TestAddRandom(t *testing.T) {
 		for i = 0; i < count; i++ {
 
 			if tree.Count() != i {
-				t.Fatal("Should have count() equal to %v", count)
+				t.Fatalf("Should have count() equal to %v", count)
 			}
 
 			var pos uint64
@@ -69,7 +80,7 @@ func TestAddRandom(t *testing.T) {
 			} else {
 				pos = uint64(rand.Int63()) % i
 			}
-			tree = tree.InsertAt(pos, s.FormatUint(i, 10))
+			tree = tree.InsertAt(pos, BytesFromInt(i))
 			if !tree.InvariantAllLeavesAtSameDepth() {
 				t.Fatal("invariant all leaves at same depth broken")
 			}
@@ -77,7 +88,7 @@ func TestAddRandom(t *testing.T) {
 
 		actual := tree.Count()
 		if actual != count {
-			t.Fatal("Should have count equal to x is y", count, actual)
+			t.Fatalf("Should have count equal to %v, is %v", count, actual)
 		}
 	}
 }
@@ -88,14 +99,14 @@ func TestGet(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 	}
 
 	for i = 0; i < count; i++ {
 		res, _ := tree.GetAt(i)
 
-		if res != s.FormatUint(-i-1+count, 10) {
-			t.Fatal("Got %v from index %v, expected %v", res, i, -i-1+count)
+		if IntFromBytes(res) != -i-1+count {
+			t.Fatalf("Got %v from index %v, expected %v", res, i, -i-1+count)
 		}
 	}
 }
@@ -106,14 +117,14 @@ func TestGetAddingFromEnd(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 	}
 
 	for i = 0; i < count; i++ {
 		res, _ := tree.GetAt(i)
 
-		if res != s.FormatUint(i, 10) {
-			t.Fatal("Got %v from index %v, expected %v", res, i, i)
+		if IntFromBytes(res) != i {
+			t.Fatalf("Got %v from index %v, expected %v", res, i, i)
 		}
 	}
 }
@@ -125,14 +136,14 @@ func TestRemoveSpecific(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 	}
 
 	tree = tree.RemoveAt(1)
 
 	got, _ := tree.GetAt(0)
 
-	if got != "0" {
+	if IntFromBytes(got) != 0 {
 		t.Fatal("did not get 0 from tree with removed 1:st element")
 	}
 }
@@ -143,14 +154,14 @@ func TestRemove(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 	}
 
 	for i = 0; i < count; i++ {
 
 		actual := tree.Count()
 		if actual != count-i {
-			t.Fatal("Should have count() equal to", count-i, "is", actual)
+			t.Fatalf("Should have count() equal to %v, is %v", count-i, actual)
 		}
 
 		tree = tree.RemoveAt(0)
@@ -170,13 +181,13 @@ func TestRemoveReverse(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 	}
 
 	for i = 0; i < count; i++ {
 		actual := tree.Count()
 		if actual != count-i {
-			t.Fatal("Should have count() equal to %v, is %v", count-i, actual)
+			t.Fatalf("Should have count() equal to %v, is %v", count-i, actual)
 		}
 
 		tree = tree.RemoveAt(count - i - 1)
@@ -196,7 +207,7 @@ func TestRemoveEveryOtherPreservingOrder(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count*2; i++ {
-		tree = tree.InsertAt(i, s.FormatUint(i, 10))
+		tree = tree.InsertAt(i, BytesFromInt(i))
 	}
 
 	for i = 0; i < count; i++ {
@@ -205,8 +216,8 @@ func TestRemoveEveryOtherPreservingOrder(t *testing.T) {
 
 	for i = 0; i < count; i++ {
 		res, _ := tree.GetAt(i)
-		if res != s.FormatUint(i*2+1, 10) {
-			t.Fatal("Got %v from index %v, expected %v", res, i, count-i-1)
+		if IntFromBytes(res) != i*2+1 {
+			t.Fatalf("Got %v from index %v, expected %v", IntFromBytes(res), i, count-i-1)
 		}
 	}
 }
@@ -220,7 +231,7 @@ func TestRemoveRandom(t *testing.T) {
 
 		var i uint64
 		for i = 0; i < count; i++ {
-			tree = tree.InsertAt(i, s.FormatUint(i, 10))
+			tree = tree.InsertAt(i, BytesFromInt(i))
 		}
 
 		for i = 0; i < count; i++ {
@@ -253,6 +264,6 @@ func BenchmarkAdd(*testing.B) {
 
 	var i uint64
 	for i = 0; i < 100000; i++ {
-		tree = tree.InsertAt(0, "fonk")
+		tree = tree.InsertAt(0, []byte("fonk"))
 	}
 }

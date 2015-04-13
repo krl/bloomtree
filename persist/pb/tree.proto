@@ -9,5 +9,5 @@ message Tree {
 		}
 		required DataType Type = 1;
 		required uint64 Count = 2;
-		optional string Data = 3;
+		optional bytes Data = 3;
 }

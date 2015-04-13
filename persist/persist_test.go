@@ -1,18 +1,28 @@
 package persist_test
 
 import (
-	"fmt"
+	"encoding/binary"
 	ds "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore/sync"
 	"github.com/ipfs/go-ipfs/blocks/blockstore"
 	bs "github.com/ipfs/go-ipfs/blockservice"
 	"github.com/ipfs/go-ipfs/exchange/offline"
 	mdag "github.com/ipfs/go-ipfs/merkledag"
-	s "strconv"
 
 	. "github.com/krl/bloomtree/root"
 	"testing"
 )
+
+func BytesFromInt(i uint64) []byte {
+	b := make([]byte, 8)
+	binary.PutUvarint(b, i)
+	return b
+}
+
+func IntFromBytes(b []byte) uint64 {
+	res, _ := binary.Uvarint(b)
+	return res
+}
 
 func getMockDagServ(t testing.TB) mdag.DAGService {
 	dstore := ds.NewMapDatastore()
@@ -47,7 +57,7 @@ func TestPersistSingletonRoot(t *testing.T) {
 	dserv := getMockDagServ(t)
 
 	tree := TreeRoot{}
-	tree = tree.InsertAt(0, "leafy!")
+	tree = tree.InsertAt(0, []byte("leafy!"))
 
 	persisted := tree.Persist(dserv)
 
@@ -58,7 +68,7 @@ func TestPersistSingletonRoot(t *testing.T) {
 	get0, _ := tree.GetAt(0)
 	get1, _ := persisted.GetAt(0)
 
-	if get0 != get1 {
+	if IntFromBytes(get0) != IntFromBytes(get1) {
 		t.Fatal("Item retrieved does not match")
 	}
 }
@@ -72,7 +82,7 @@ func PersistAndGetAllValues(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 	}
 
 	tree = tree.Persist(dserv)
@@ -80,8 +90,8 @@ func PersistAndGetAllValues(t *testing.T) {
 	for i = 0; i < count; i++ {
 		res, _ := tree.GetAt(i)
 
-		if res != s.FormatUint(-i-1+count, 10) {
-			t.Errorf("Got %v from index %v, expected %v", res, i, -i-1+count)
+		if IntFromBytes(res) != -i-1+count {
+			t.Fatalf("Got %v from index %v, expected %v", IntFromBytes(res), i, -i-1+count)
 		}
 	}
 }
@@ -101,9 +111,9 @@ func TestPersistReplacingRoot(t *testing.T) {
 		res := tree.Count()
 
 		if res != i {
-			t.Errorf("Should have count() equal to %v, is %v", i, res)
+			t.Fatalf("Should have count() equal to %v, is %v", i, res)
 		}
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 	}
 }
 
@@ -116,7 +126,7 @@ func TestPersistAndGetFirstValue(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 	}
 
 	// persist and insert at beginning
@@ -127,7 +137,7 @@ func TestPersistAndGetFirstValue(t *testing.T) {
 		t.Fatal("dereference fail")
 	}
 
-	tree = tree.InsertAt(0, "beep boop")
+	tree = tree.InsertAt(0, []byte("beep boop"))
 
 	if tree.CountUnreferencedNodes() != 10 {
 		t.Fatal("Should have 10 unreferenced members")
@@ -147,7 +157,7 @@ func TestPersistAndGetAllValues(t *testing.T) {
 
 	var i uint64
 	for i = 0; i < count; i++ {
-		tree = tree.InsertAt(0, s.FormatUint(i, 10))
+		tree = tree.InsertAt(0, BytesFromInt(i))
 	}
 
 	// persist and insert at beginning

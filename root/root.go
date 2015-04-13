@@ -53,9 +53,9 @@ func (r TreeRoot) Count() uint64 {
 // because we want to cache the nodes loaded from disk
 // the logical value will still be immutable, and all non-test
 // functions will report the same value
-func (r *TreeRoot) GetAt(i uint64) (string, error) {
+func (r *TreeRoot) GetAt(i uint64) ([]byte, error) {
 	if i > r.Count() {
-		return "", fmt.Errorf("Index out of bounds")
+		return nil, fmt.Errorf("Index out of bounds")
 	}
 
 	tree, leaf := r.value.GetAt(i)
@@ -76,7 +76,7 @@ func (r TreeRoot) RemoveAt(i uint64) TreeRoot {
 	return TreeRoot{value: new}
 }
 
-func (r TreeRoot) InsertAt(i uint64, s string) TreeRoot {
+func (r TreeRoot) InsertAt(i uint64, s []byte) TreeRoot {
 
 	leaf := two3.NewLeaf(s)
 

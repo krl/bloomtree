@@ -58,7 +58,7 @@ func (x *Tree_DataType) UnmarshalJSON(data []byte) error {
 type Tree struct {
 	Type             *Tree_DataType `protobuf:"varint,1,req,enum=persist.pb.Tree_DataType" json:"Type,omitempty"`
 	Count            *uint64        `protobuf:"varint,2,req" json:"Count,omitempty"`
-	Data             *string        `protobuf:"bytes,3,opt" json:"Data,omitempty"`
+	Data             []byte         `protobuf:"bytes,3,opt" json:"Data,omitempty"`
 	XXX_unrecognized []byte         `json:"-"`
 }
 
@@ -80,11 +80,11 @@ func (m *Tree) GetCount() uint64 {
 	return 0
 }
 
-func (m *Tree) GetData() string {
-	if m != nil && m.Data != nil {
-		return *m.Data
+func (m *Tree) GetData() []byte {
+	if m != nil {
+		return m.Data
 	}
-	return ""
+	return nil
 }
 
 func init() {
