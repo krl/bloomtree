@@ -16,23 +16,20 @@ var _ = math.Inf
 type Tree_DataType int32
 
 const (
-	Tree_Root  Tree_DataType = 0
-	Tree_Node2 Tree_DataType = 1
-	Tree_Node3 Tree_DataType = 2
-	Tree_Leaf  Tree_DataType = 3
+	Tree_Node2 Tree_DataType = 0
+	Tree_Node3 Tree_DataType = 1
+	Tree_Leaf  Tree_DataType = 2
 )
 
 var Tree_DataType_name = map[int32]string{
-	0: "Root",
-	1: "Node2",
-	2: "Node3",
-	3: "Leaf",
+	0: "Node2",
+	1: "Node3",
+	2: "Leaf",
 }
 var Tree_DataType_value = map[string]int32{
-	"Root":  0,
-	"Node2": 1,
-	"Node3": 2,
-	"Leaf":  3,
+	"Node2": 0,
+	"Node3": 1,
+	"Leaf":  2,
 }
 
 func (x Tree_DataType) Enum() *Tree_DataType {

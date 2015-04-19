@@ -2,10 +2,9 @@ package persist.pb;
 
 message Tree {
 		enum DataType {
-				Root = 0;
-				Node2 = 1;
-				Node3 = 2;
-				Leaf = 3;
+				Node2 = 0;
+				Node3 = 1;
+				Leaf = 2;
 		}
 		required DataType Type = 1;
 		required uint64 Count = 2;
