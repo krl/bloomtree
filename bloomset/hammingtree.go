@@ -7,11 +7,11 @@ import (
 
 type tree interface {
 	insert(leaf) tree
+	remove(leaf) (tree, bool)
 	getFilter() filter.Filter
 
 	find(filter.Filter, chan Value)
 
-	// Get() (tree, Value)
 	// Count() uint64
 	// Persist(dserv mdag.DAGService) treeRef
 
@@ -37,8 +37,18 @@ func newNode(c1 tree, c2 tree) tree {
 }
 
 func (l1 leaf) insert(l2 leaf) tree {
-	// TODO, check for duplicates
+	if l1 == l2 {
+		return l1 // store no duplicates
+	}
 	return newNode(l1, l2)
+}
+
+func (l1 leaf) remove(l2 leaf) (tree, bool) {
+	// false positives are still possible
+	if l1 == l2 {
+		return nil, true
+	}
+	return l1, false
 }
 
 func (l leaf) getFilter() filter.Filter {
@@ -83,6 +93,31 @@ func (n node) insert(l leaf) tree {
 	} else {
 		return newNode(n.children[0], n.children[1].insert(l))
 	}
+}
+
+func (n node) remove(l leaf) (tree, bool) {
+	lfilt := l.getFilter()
+
+	for i := 0; i < 2; i++ {
+		var res tree
+		var success bool
+
+		if n.children[i].getFilter().MayContain(lfilt) {
+			res, success = n.children[i].remove(l)
+		}
+
+		if success && res == nil {
+			// we deleted a leaf. Return the other one
+			return n.children[(i+1)%2], true
+		} else if success {
+			// leaf was deleted further down
+			// NB child order does not matter
+			return newNode(n.children[(i+1)%2], res), true
+		}
+	}
+
+	// if unsuccessful, return self
+	return n, false
 }
 
 func (n node) getFilter() filter.Filter {

@@ -10,6 +10,11 @@ func NewFilter(size int) bf.Filter {
 	return bf.NewFilter(size)
 }
 
+// matches everything!
+func EmptyFilter() Filter {
+	return Filter{}
+}
+
 func (fs1 Filter) Merge(fs2 Filter) Filter {
 
 	newfilt := Filter{}

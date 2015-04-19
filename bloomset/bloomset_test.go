@@ -187,11 +187,32 @@ func TestReasonableBalance(t *testing.T) {
 	}
 }
 
+func TestEmptyFilter(t *testing.T) {
+
+	set := NewBloomSet()
+
+	for i := 0; i < 10; i++ {
+		set = set.Insert(NewTextValue(fmt.Sprintf("entry #%v", i)))
+	}
+
+	result := set.Find(filter.EmptyFilter())
+
+	count := 0
+	for v := range result {
+		v = v // eeh, there should be a better way to do this
+		count++
+	}
+
+	if count != 10 {
+		t.Fatal("Emtpy filter should match everything")
+	}
+}
+
 func TestHaystack(t *testing.T) {
 
 	set := NewBloomSet()
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		set = set.Insert(NewTextValue(fmt.Sprintf("haystrand #%v", i)))
 	}
 
@@ -201,6 +222,32 @@ func TestHaystack(t *testing.T) {
 	content := (<-result).(TextValue).content
 
 	if content != "needle" {
+		t.Fatal("did not find the needle!")
+	}
+}
+
+func TestHaystackRemoving(t *testing.T) {
+
+	set := NewBloomSet()
+
+	count := 1000
+
+	for i := 0; i < count; i++ {
+		set = set.Insert(NewTextValue(fmt.Sprintf("haystrand #%v", i)))
+	}
+
+	set = set.Insert(NewTextValue("needle"))
+
+	for i := 0; i < count; i++ {
+		set = set.Remove(NewTextValue(fmt.Sprintf("haystrand #%v", i)))
+	}
+
+	result := set.Find(filter.EmptyFilter())
+
+	content := (<-result).(TextValue).content
+
+	if content != "needle" {
+		fmt.Println(content)
 		t.Fatal("did not find the needle!")
 	}
 }

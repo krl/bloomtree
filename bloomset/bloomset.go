@@ -22,6 +22,16 @@ func (s BloomSet) Insert(v Value) BloomSet {
 	return BloomSet{value: s.value.insert(leaf)}
 }
 
+func (s BloomSet) Remove(v Value) BloomSet {
+	leaf := leaf{value: v}
+
+	if s.value == nil {
+		return BloomSet{}
+	}
+	value, _ := s.value.remove(leaf)
+	return BloomSet{value: value}
+}
+
 func (s BloomSet) Find(f filter.Filter) <-chan Value {
 	c := make(chan Value)
 
