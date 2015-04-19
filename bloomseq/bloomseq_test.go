@@ -1,11 +1,29 @@
-package root
+package bloomseq
 
 import (
-	// "fmt"
+	ds "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore"
+	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore/sync"
+	"github.com/ipfs/go-ipfs/blocks/blockstore"
+	bs "github.com/ipfs/go-ipfs/blockservice"
+	"github.com/ipfs/go-ipfs/exchange/offline"
+	mdag "github.com/ipfs/go-ipfs/merkledag"
+
 	"encoding/binary"
 	"math/rand"
 	"testing"
 )
+
+func getMockDagServ(t testing.TB) mdag.DAGService {
+	dstore := ds.NewMapDatastore()
+	tsds := sync.MutexWrap(dstore)
+	bstore := blockstore.NewBlockstore(tsds)
+	bserv, err := bs.New(bstore, offline.Exchange(bstore))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dserv := mdag.NewDAGService(bserv)
+	return dserv
+}
 
 func BytesFromInt(i uint64) []byte {
 	b := make([]byte, 8)
@@ -20,7 +38,7 @@ func IntFromBytes(b []byte) uint64 {
 
 func TestAdd(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -41,7 +59,7 @@ func TestAdd(t *testing.T) {
 
 func TestAddReverse(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -65,7 +83,7 @@ func TestAddRandom(t *testing.T) {
 	rounds := 100
 
 	for r := 0; r < rounds; r++ {
-		tree := TreeRoot{}
+		tree := BloomSeq{}
 
 		var i uint64
 		for i = 0; i < count; i++ {
@@ -95,7 +113,7 @@ func TestAddRandom(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -113,7 +131,7 @@ func TestGet(t *testing.T) {
 
 func TestGetAddingFromEnd(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -132,7 +150,7 @@ func TestGetAddingFromEnd(t *testing.T) {
 func TestRemoveSpecific(t *testing.T) {
 
 	var count uint64 = 4
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -150,7 +168,7 @@ func TestRemoveSpecific(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -177,7 +195,7 @@ func TestRemove(t *testing.T) {
 
 func TestRemoveReverse(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -203,7 +221,7 @@ func TestRemoveReverse(t *testing.T) {
 
 func TestRemoveEveryOtherPreservingOrder(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count*2; i++ {
@@ -227,7 +245,7 @@ func TestRemoveRandom(t *testing.T) {
 	rounds := 100
 
 	for r := 0; r < rounds; r++ {
-		tree := TreeRoot{}
+		tree := BloomSeq{}
 
 		var i uint64
 		for i = 0; i < count; i++ {
@@ -260,10 +278,155 @@ func TestRemoveRandom(t *testing.T) {
 }
 
 func BenchmarkAdd(*testing.B) {
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < 100000; i++ {
 		tree = tree.InsertAt(0, []byte("fonk"))
+	}
+}
+
+// persistance tests
+
+func TestPersistEmtpyRoot(t *testing.T) {
+	dserv := getMockDagServ(t)
+
+	tree := BloomSeq{}
+
+	persisted := tree.Persist(dserv)
+
+	if tree != persisted {
+		t.Fatal("Did not get same BloomSeq back")
+	}
+
+	if tree.Count() != persisted.Count() {
+		t.Fatal("Count differs between trees")
+	}
+
+}
+
+func TestPersistSingletonRoot(t *testing.T) {
+	dserv := getMockDagServ(t)
+
+	tree := BloomSeq{}
+	tree = tree.InsertAt(0, []byte("leafy!"))
+
+	persisted := tree.Persist(dserv)
+
+	if tree.Count() != persisted.Count() {
+		t.Fatal("Count differs between trees")
+	}
+
+	get0, _ := tree.GetAt(0)
+	get1, _ := persisted.GetAt(0)
+
+	if IntFromBytes(get0) != IntFromBytes(get1) {
+		t.Fatal("Item retrieved does not match")
+	}
+}
+
+func PersistAndGetAllValues(t *testing.T) {
+
+	dserv := getMockDagServ(t)
+
+	var count uint64 = 100
+	tree := BloomSeq{}
+
+	var i uint64
+	for i = 0; i < count; i++ {
+		tree = tree.InsertAt(0, BytesFromInt(i))
+	}
+
+	tree = tree.Persist(dserv)
+
+	for i = 0; i < count; i++ {
+		res, _ := tree.GetAt(i)
+
+		if IntFromBytes(res) != -i-1+count {
+			t.Fatalf("Got %v from index %v, expected %v", IntFromBytes(res), i, -i-1+count)
+		}
+	}
+}
+
+func TestPersistReplacingRoot(t *testing.T) {
+
+	dserv := getMockDagServ(t)
+
+	var count uint64 = 100
+	tree := BloomSeq{}
+
+	var i uint64
+	for i = 0; i < count; i++ {
+
+		// persist at each step
+		tree = tree.Persist(dserv)
+		res := tree.Count()
+
+		if res != i {
+			t.Fatalf("Should have count() equal to %v, is %v", i, res)
+		}
+		tree = tree.InsertAt(0, BytesFromInt(i))
+	}
+}
+
+func TestPersistAndGetFirstValue(t *testing.T) {
+
+	dserv := getMockDagServ(t)
+
+	var count uint64 = 100
+	tree := BloomSeq{}
+
+	var i uint64
+	for i = 0; i < count; i++ {
+		tree = tree.InsertAt(0, BytesFromInt(i))
+	}
+
+	// persist and insert at beginning
+
+	tree = tree.Persist(dserv)
+
+	if tree.CountUnreferencedNodes() != 1 {
+		t.Fatal("dereference fail")
+	}
+
+	tree = tree.InsertAt(0, []byte("beep boop"))
+
+	if tree.CountUnreferencedNodes() != 10 {
+		t.Fatal("Should have 10 unreferenced members")
+	}
+
+	if tree.Count() != count+1 {
+		t.Fatal("Should have count + 1 members")
+	}
+}
+
+func TestPersistAndGetAllValues(t *testing.T) {
+
+	dserv := getMockDagServ(t)
+
+	var count uint64 = 100
+	tree := BloomSeq{}
+
+	var i uint64
+	for i = 0; i < count; i++ {
+		tree = tree.InsertAt(0, BytesFromInt(i))
+	}
+
+	// persist and insert at beginning
+
+	tree = tree.Persist(dserv)
+
+	if tree.CountUnreferencedNodes() != 1 {
+		t.Fatal("dereference fail")
+	}
+
+	// access all the values
+	for i = 0; i < count; i++ {
+		_, _ = tree.GetAt(i)
+	}
+
+	// now local tree should have all elements unreferenced
+	if tree.Count() != uint64(tree.CountUnreferencedNodes()) {
+		t.Fatal("Should have all nodes in memory")
 	}
 }

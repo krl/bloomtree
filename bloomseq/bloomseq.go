@@ -1,32 +1,31 @@
-package root
+package bloomseq
 
 import (
 	"fmt"
-	//"github.com/ipfs/go-ipfs/core"
 	mdag "github.com/ipfs/go-ipfs/merkledag"
-	two3 "github.com/krl/bloomtree/two3"
+	// . "github.com/krl/bloomtree/value"
 )
 
-type TreeRoot struct {
-	value two3.Tree
+type BloomSeq struct {
+	value tree
 }
 
-func (r TreeRoot) GetLeavesDepth() []int {
+func (r BloomSeq) GetLeavesDepth() []int {
 	if r.value == nil {
 		return []int{}
 	}
-	return r.value.GetLeavesDepth(0)
+	return r.value.getLeavesDepth(0)
 }
 
-func (r TreeRoot) CountUnreferencedNodes() int {
+func (r BloomSeq) CountUnreferencedNodes() int {
 	if r.value != nil {
-		return r.value.CountUnreferencedNodes()
+		return r.value.countUnreferencedNodes()
 	}
 	fmt.Printf("empty tree case: 0")
 	return 0
 }
 
-func (r TreeRoot) InvariantAllLeavesAtSameDepth() bool {
+func (r BloomSeq) InvariantAllLeavesAtSameDepth() bool {
 	depths := r.GetLeavesDepth()
 	track := 0
 
@@ -41,11 +40,11 @@ func (r TreeRoot) InvariantAllLeavesAtSameDepth() bool {
 	return true
 }
 
-func (r TreeRoot) Count() uint64 {
+func (r BloomSeq) Count() uint64 {
 	if r.value == nil {
 		return 0
 	} else {
-		return r.value.Count()
+		return r.value.count()
 	}
 }
 
@@ -53,12 +52,12 @@ func (r TreeRoot) Count() uint64 {
 // because we want to cache the nodes loaded from disk
 // the logical value will still be immutable, and all non-test
 // functions will report the same value
-func (r *TreeRoot) GetAt(i uint64) ([]byte, error) {
+func (r *BloomSeq) GetAt(i uint64) ([]byte, error) {
 	if i > r.Count() {
 		return nil, fmt.Errorf("Index out of bounds")
 	}
 
-	tree, leaf := r.value.GetAt(i)
+	tree, leaf := r.value.getAt(i)
 
 	// scary mutation
 	r.value = tree
@@ -66,43 +65,43 @@ func (r *TreeRoot) GetAt(i uint64) ([]byte, error) {
 	return leaf.Value, nil
 }
 
-func (r TreeRoot) RemoveAt(i uint64) TreeRoot {
+func (r BloomSeq) RemoveAt(i uint64) BloomSeq {
 	if i > r.Count()-1 {
 		panic("Index out of bounds")
 	}
 
-	new, _ := r.value.RemoveAt(i)
+	new, _ := r.value.removeAt(i)
 
-	return TreeRoot{value: new}
+	return BloomSeq{value: new}
 }
 
-func (r TreeRoot) InsertAt(i uint64, s []byte) TreeRoot {
+func (r BloomSeq) InsertAt(i uint64, s []byte) BloomSeq {
 
-	leaf := two3.NewLeaf(s)
+	leaf := newLeaf(s)
 
 	if r.value == nil {
 		// if tree root is empty, just insert the leaf
-		return TreeRoot{value: leaf}
+		return BloomSeq{value: leaf}
 	} else {
 		// else insert in element
-		ref1, ref2 := r.value.InsertAt(i, leaf)
+		ref1, ref2 := r.value.insertAt(i, leaf)
 
 		// do we have a split?
 		if ref2 != nil {
-			return TreeRoot{value: two3.NewNode2([]two3.Tree{ref1, ref2})}
+			return BloomSeq{value: newNode2([]tree{ref1, ref2})}
 		} else {
-			return TreeRoot{value: ref1}
+			return BloomSeq{value: ref1}
 		}
 	}
-	return TreeRoot{}
+	return BloomSeq{}
 }
 
 // Persistance
 
-func (r TreeRoot) Persist(dserv mdag.DAGService) TreeRoot {
+func (r BloomSeq) Persist(dserv mdag.DAGService) BloomSeq {
 	if r.value != nil {
-		return TreeRoot{value: r.value.Persist(dserv)}
+		return BloomSeq{value: r.value.persist(dserv)}
 	} else {
-		return TreeRoot{}
+		return BloomSeq{}
 	}
 }

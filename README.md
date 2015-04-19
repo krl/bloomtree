@@ -16,7 +16,7 @@ func TestPersistAndGetFirstValue(t *testing.T) {
 	dserv := getMockDagServ(t)
 
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
@@ -53,7 +53,7 @@ This is an example from the tests:
 
 func TestRemove(t *testing.T) {
 	var count uint64 = 100
-	tree := TreeRoot{}
+	tree := BloomSeq{}
 
 	var i uint64
 	for i = 0; i < count; i++ {
