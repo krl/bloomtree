@@ -9,6 +9,6 @@ import (
 // * correspond to a set of bloomfilters
 
 type Value interface {
-	// Serialize() []byte
+	Serialize() []byte
 	GetFilter() filter.Filter
 }

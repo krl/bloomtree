@@ -1,67 +1,15 @@
 package bloomset
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/krl/bloomtree/filter"
-	. "github.com/krl/bloomtree/value"
-	"strings"
 	"testing"
+
+	. "github.com/krl/bloomtree/common"
 )
 
-type TextValue struct {
-	content string
-}
-
-func NewTextValue(s string) Value {
-	return TextValue{content: s}
-}
-
-func TextFilter(word string) filter.Filter {
-	filt := filter.NewFilter(32)
-	filt.Add([]byte(word))
-	return filter.Filter{
-		"words": filt,
-	}
-}
-
-func CountFilter(i uint64) filter.Filter {
-	b := make([]byte, 8)
-	binary.PutUvarint(b, i)
-
-	filt := filter.NewFilter(32)
-	filt.Add(b)
-
-	return filter.Filter{
-		"count": filt,
-	}
-}
-
-func (t TextValue) GetFilter() filter.Filter {
-
-	wordfilter := filter.NewFilter(32)
-	countfilter := filter.NewFilter(32)
-
-	var count uint64 = 0
-
-	for _, word := range strings.Split(t.content, " ") {
-		wordfilter.Add([]byte(word))
-		count++
-	}
-
-	b := make([]byte, 8)
-	binary.PutUvarint(b, count)
-
-	countfilter.Add(b)
-
-	return filter.Filter{
-		"words": wordfilter,
-		"count": countfilter,
-	}
-}
-
 func TestSingletonTree(t *testing.T) {
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	val1 := NewTextValue("wonk")
 	val2 := NewTextValue("donk")
@@ -83,7 +31,7 @@ func TestSingletonTree(t *testing.T) {
 
 func TestQueries(t *testing.T) {
 
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	set = set.Insert(NewTextValue("one"))
 	set = set.Insert(NewTextValue("one two"))
@@ -103,10 +51,10 @@ func TestQueries(t *testing.T) {
 	// should get one result
 	result1 := set.Find(TextFilter("four"))
 
-	content := (<-result1).(TextValue).content
+	Content := (<-result1).(TextValue).Content
 
-	if content != "one two three four" {
-		t.Fatalf("Should have found one two three four, found \"%v\"", content)
+	if Content != "one two three four" {
+		t.Fatalf("Should have found one two three four, found \"%v\"", Content)
 	}
 
 	// multiple results
@@ -161,7 +109,7 @@ func TestQueries(t *testing.T) {
 }
 
 func TestReasonableBalance(t *testing.T) {
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	for i := 0; i < 1000; i++ {
 		set = set.Insert(NewTextValue(fmt.Sprintf("element #%v", i)))
@@ -189,7 +137,7 @@ func TestReasonableBalance(t *testing.T) {
 
 func TestEmptyFilter(t *testing.T) {
 
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	for i := 0; i < 10; i++ {
 		set = set.Insert(NewTextValue(fmt.Sprintf("entry #%v", i)))
@@ -210,7 +158,7 @@ func TestEmptyFilter(t *testing.T) {
 
 func TestHaystack(t *testing.T) {
 
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	for i := 0; i < 1000; i++ {
 		set = set.Insert(NewTextValue(fmt.Sprintf("haystrand #%v", i)))
@@ -219,16 +167,16 @@ func TestHaystack(t *testing.T) {
 	set = set.Insert(NewTextValue("needle"))
 	result := set.Find(TextFilter("needle"))
 
-	content := (<-result).(TextValue).content
+	Content := (<-result).(TextValue).Content
 
-	if content != "needle" {
+	if Content != "needle" {
 		t.Fatal("did not find the needle!")
 	}
 }
 
 func TestHaystackRemoving(t *testing.T) {
 
-	set := NewBloomSet()
+	set := NewBloomSet(DeserializeTextValue)
 
 	count := 1000
 
@@ -244,10 +192,64 @@ func TestHaystackRemoving(t *testing.T) {
 
 	result := set.Find(filter.EmptyFilter())
 
-	content := (<-result).(TextValue).content
+	Content := (<-result).(TextValue).Content
 
-	if content != "needle" {
-		fmt.Println(content)
+	if Content != "needle" {
+		fmt.Println(Content)
 		t.Fatal("did not find the needle!")
+	}
+}
+
+// persistance test
+
+func TestPersistSingletonRoot(t *testing.T) {
+	dserv := GetMockDagServ(t)
+
+	set := NewBloomSet(DeserializeTextValue)
+
+	val := NewTextValue("wonk")
+	set = set.Insert(val)
+
+	persisted := set.Persist(dserv)
+
+	result := persisted.Find(filter.EmptyFilter())
+
+	if <-result != val {
+		t.Fatal("Should have found the value in persisted tree")
+	}
+}
+
+func TestPersistHaystack(t *testing.T) {
+
+	dserv := GetMockDagServ(t)
+
+	set := NewBloomSet(DeserializeTextValue)
+
+	count := 1000
+
+	for i := 0; i < count; i++ {
+		set = set.Insert(NewTextValue(fmt.Sprintf("haystrand #%v", i)))
+	}
+
+	set = set.Insert(NewTextValue("needle"))
+
+	persisted := set.Persist(dserv)
+
+	if persisted.CountUnreferencedNodes() != 1 {
+		t.Fatal("dereference fail")
+	}
+
+	result := persisted.Find(TextFilter("needle"))
+
+	Content := (<-result).(TextValue).Content
+
+	if Content != "needle" {
+		t.Fatal("did not find the needle!")
+	}
+
+	unreffed := persisted.CountUnreferencedNodes()
+
+	if unreffed != 12 {
+		t.Fatalf("should have dereferenced log(n) nodes (got %v)", unreffed)
 	}
 }

@@ -1,0 +1,16 @@
+package bloomset.pb;
+
+message FilterElement {
+		required string Name = 1;
+		required bytes  BloomFilter = 2;
+}
+
+message Tree {
+		enum DataType {
+				Node = 1;
+				Leaf = 2;
+		}
+		required DataType Type = 1;
+		repeated FilterElement Filter = 2;
+		optional bytes Data = 3;
+}

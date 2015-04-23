@@ -15,6 +15,16 @@ func EmptyFilter() Filter {
 	return Filter{}
 }
 
+func (fs Filter) AddBloom(name string, bytes []byte) Filter {
+	if fs[name] != nil {
+		panic("cannot add already set name to filter")
+	}
+
+	fs[name] = bf.FilterFromBytes(bytes)
+
+	return fs
+}
+
 func (fs1 Filter) Merge(fs2 Filter) Filter {
 
 	newfilt := Filter{}
@@ -51,7 +61,7 @@ func (f1 Filter) HammingDistance(f2 Filter) int {
 
 func (bigger Filter) MayContain(smaller Filter) bool {
 	for k, _ := range smaller {
-		may, _ := bigger[k].MayContain(smaller[k])
+		may, _ := bigger[k].SupersetOf(smaller[k])
 		if !may {
 			return false
 		}
